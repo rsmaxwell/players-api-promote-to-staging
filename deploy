@@ -6,14 +6,14 @@
 . ./version
 
 #**************************************************************
-# Deploy 'players-api' to 'internal'
+# Deploy 'players-api' to 'staging'
 #**************************************************************
 GOARCH=$(go env GOARCH)
 GOOS=$(go env GOOS)
 
 REPOSITORY_URL="https://server.rsmaxwell.co.uk/archiva/repository"
-REPOSITORYID="internal"
-REPOSITORY="internal"
+REPOSITORYID="staging"
+REPOSITORY="staging"
 GROUPID="com.rsmaxwell.players"
 NAME="players-api"
 VERSION=${players_api_version}
