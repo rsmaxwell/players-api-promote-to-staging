@@ -281,7 +281,17 @@ fi
 #**************************************************************
 # Start the players-api server
 #**************************************************************
-${WORKSPACE}/bin/players-api --port 12001 &
+export PLAYERS_API_ROOTDIR="${WORKSPACE}/testdir"
+export DEBUG_DUMP_DIR="${WORKSPACE}/dump"
+export PORT="12001"
+
+#export DEBUG_LEVEL=50
+#export DEBUG_DEFAULT_PACKAGE_LEVEL=30
+#export DEBUG_DEFAULT_FUNCTION_LEVEL=50
+#export DEBUG_PACKAGE_LEVEL_sync=50
+#export DEBUG_FUNCTION_LEVEL_sync_HandleDir=50
+
+${WORKSPACE}/bin/players-api &
 pid=$!
 echo "${pid}" > pid.txt
 
