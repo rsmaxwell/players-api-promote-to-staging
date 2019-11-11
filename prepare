@@ -73,15 +73,13 @@ cat <<EOT > pom.xml
 </project>
 EOT
 
-mvn --batch-mode versions:use-latest-releases 1>stdout.txt 2>stderr.txt
+mvn --batch-mode --log-file output.txt versions:use-latest-releases
 result=$?
 if [ ! ${result} == 0 ]; then
     echo "Error: $0[${LINENO}]"
     echo "result: ${result}"
-    echo "----[ stdout ]--------------------------"
-    cat stdout.txt
-    echo "----[ stderr ]--------------------------"
-    cat stderr.txt
+    echo "----[ output.txt ]--------------------------"
+    cat output.txt
     echo "----------------------------------------"
     exit 1
 fi
@@ -107,15 +105,13 @@ fi
 players_api_version="${BASH_REMATCH[1]}"
 echo "players_api_version: ${players_api_version}"
 
-mvn --batch-mode dependency:resolve 1>stdout.txt 2>stderr.txt
+mvn --batch-mode --log-file output.txt dependency:resolve
 result=$?
 if [ ! ${result} == 0 ]; then
     echo "Error: $0[${LINENO}]"
     echo "result: ${result}"
-    echo "----[ stdout ]--------------------------"
-    cat stdout.txt
-    echo "----[ stderr ]--------------------------"
-    cat stderr.txt
+    echo "----[ output.txt  ]--------------------------"
+    cat output.txt 
     echo "----------------------------------------"
     exit 1
 fi
@@ -153,26 +149,23 @@ EOT2
 # Resolve the version of 'players-api' needed for testing
 #**************************************************************
 
-mvn --batch-mode dependency:get \
+mvn --batch-mode --log-file output.txt dependency:get \
         -Dartifact=${GROUPID}:${ARTIFACTID}:${VERSION}:${PACKAGING} \
-        -DremoteRepositories=${REPOSITORYID}::default::${URL} \
-        1>stdout.txt 2>stderr.txt
+        -DremoteRepositories=${REPOSITORYID}::default::${URL}
 
 result=$?
 if [ ! ${result} == 0 ]; then
     echo "Error: $0[${LINENO}]"
     echo "result: ${result}"
-    echo "----[ stdout ]--------------------------"
-    cat stdout.txt
-    echo "----[ stderr ]--------------------------"
-    cat stderr.txt
+    echo "----[ output.txt ]--------------------------"
+    cat output.txt
     echo "----------------------------------------"
     exit 1
 fi
 
 CLASSIFIER="test"
 
-mvn --batch-mode dependency:get \
+mvn --batch-mode --log-file output.txt dependency:get \
         -Dartifact=${GROUPID}:${ARTIFACTID}:${VERSION}:${PACKAGING}:${CLASSIFIER} \
         -DremoteRepositories=${REPOSITORYID}::default::${URL} \
         1>stdout.txt 2>stderr.txt
@@ -181,10 +174,8 @@ result=$?
 if [ ! ${result} == 0 ]; then
     echo "Error: $0[${LINENO}]"
     echo "result: ${result}"
-    echo "----[ stdout ]--------------------------"
-    cat stdout.txt
-    echo "----[ stderr ]--------------------------"
-    cat stderr.txt
+    echo "----[ output.txt ]--------------------------"
+    cat output.txt
     echo "----------------------------------------"
     exit 1
 fi
