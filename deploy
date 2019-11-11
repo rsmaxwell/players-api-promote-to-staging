@@ -19,11 +19,14 @@ NAME="players-api"
 VERSION=${players_api_version}
 PACKAGING="zip"
 
-ARTIFACTID=${NAME}-${GOARCH}-${GOOS}
 URL=${REPOSITORY_URL}/${REPOSITORY}/
+ARTIFACTID=${NAME}-${GOARCH}-${GOOS}
+
 
 filename=${ARTIFACTID}-${VERSION}.${PACKAGING}
 pathname=${HOME}/.m2/repository/${GROUPID//.//}/${ARTIFACTID}/${VERSION}/${filename}
+
+
 if [ ! -f ${pathname} ]; then
     echo "Error: $0[${LINENO}]"
     echo "result: ${result}"
@@ -38,14 +41,36 @@ if [ ! ${result} == 0 ]; then
     exit 1
 fi
 
+CLASSIFIER_TEST="test"
+FILENAME_TEST=${ARTIFACTID}-${VERSION}-${CLASSIFIER_TEST}.${PACKAGING}
+pathname_test=${HOME}/.m2/repository/${GROUPID//.//}/${ARTIFACTID}/${VERSION}/${FILENAME_TEST}
+
+if [ ! -f ${pathname_test} ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result: ${result}"
+    exit 1
+fi
+
+cp ${pathname_test} .
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result: ${result}"
+    exit 1
+fi
+
 mvn --batch-mode deploy:deploy-file \
+	-Durl=${URL}  \
+	-DrepositoryId=${REPOSITORYID} \
+	-Dfile=${FILENAME} \
 	-DgroupId=${GROUPID} \
 	-DartifactId=${ARTIFACTID} \
 	-Dversion=${VERSION} \
 	-Dpackaging=${PACKAGING} \
-	-Dfile=${filename} \
-	-DrepositoryId=${REPOSITORYID} \
-	-Durl=${URL}  1>stdout.txt 2>stderr.txt
+	-Dfiles=${FILENAME_TEST} \
+	-Dclassifiers=${CLASSIFIER_TEST} \
+	-Dtypes=zip \
+	1>stdout.txt 2>stderr.txt
 	
 result=$?
 if [ ! ${result} == 0 ]; then
