@@ -1,0 +1,296 @@
+#!/bin/bash
+
+#**************************************************************
+# Clean the workspace
+#**************************************************************
+rm -rf /tmp/latest-* stdout.txt stderr.txt players-api-*.jar
+
+#**************************************************************
+# Find the latest version of 'players-api'
+#**************************************************************
+tempdir=$(mktemp -d -t latest-XXXXXXXXXX)
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result: ${result}"
+    exit 1
+fi
+
+currentdir=$(pwd)
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result: ${result}"
+    exit 1
+fi
+
+cd ${tempdir}
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result: ${result}"
+    exit 1
+fi
+
+GOARCH=$(go env GOARCH)
+GOOS=$(go env GOOS)
+
+REPOSITORY_URL="https://server.rsmaxwell.co.uk/archiva/repository"
+REPOSITORYID="internal"
+REPOSITORY="internal"
+GROUPID="com.rsmaxwell.players"
+NAME="players-api"
+PACKAGING="zip"
+
+ARTIFACTID=${NAME}-${GOARCH}-${GOOS}
+URL=${REPOSITORY_URL}/${REPOSITORY}/
+
+
+cat <<EOT > pom.xml
+<project>
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>junk</groupId>
+	<artifactId>junk</artifactId>
+	<version>junk</version>
+
+	<dependencies>
+		<dependency>
+			<groupId>${GROUPID}</groupId>
+			<artifactId>${ARTIFACTID}</artifactId>
+			<version>1</version>
+			<type>${PACKAGING}</type>
+		</dependency>
+	</dependencies>
+
+	<repositories>
+		<repository>
+			<id>${REPOSITORYID}</id>
+			<url>${URL}</url>
+		</repository>
+	</repositories>
+
+</project>
+EOT
+
+echo "---[ pom.xml ]---------------------------------"
+cat pom.xml
+echo "-----------------------------------------------"
+
+mvn --batch-mode versions:use-latest-releases 1>stdout.txt 2>stderr.txt
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result: ${result}"
+    echo "----[ stdout ]--------------------------"
+    cat stdout.txt
+    echo "----[ stderr ]--------------------------"
+    cat stderr.txt
+    echo "----------------------------------------"
+    exit 1
+fi
+
+line=$(grep "<version>" pom.xml | head -n 2 | tail -n 1)
+if [ ${#line} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    exit 1
+fi
+
+regex="<version>(.*)</version>"
+if [[ ! ${line} =~ ${regex} ]]; then
+    echo "Error: $0[${LINENO}]"
+    exit 1
+fi
+
+players_api_version="${BASH_REMATCH[1]}"
+echo "players_api_version: ${players_api_version}"
+
+mvn --batch-mode dependency:resolve 1>stdout.txt 2>stderr.txt
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result: ${result}"
+    echo "----[ stdout ]--------------------------"
+    cat stdout.txt
+    echo "----[ stderr ]--------------------------"
+    cat stderr.txt
+    echo "----------------------------------------"
+    exit 1
+fi
+
+cd ${currentdir}
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result: ${result}"
+    exit 1
+fi
+
+rm -rf ${tempdir}
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result: ${result}"
+    exit 1
+fi
+
+#**************************************************************
+# Resolve 'players-api' and its testing addons
+#**************************************************************
+VERSION="${players_api_version}"
+PACKAGING="zip"
+
+
+
+pathname="./version"
+cat >${pathname} <<EOT2
+export players_api_version=${players_api_version}
+EOT2
+
+#**************************************************************
+# Resolve the version of 'players-api' needed for testing
+#**************************************************************
+
+mvn --batch-mode dependency:get \
+        -Dartifact=${GROUPID}:${ARTIFACTID}:${VERSION}:${PACKAGING} \
+        -DremoteRepositories=${REPOSITORYID}::default::${URL} \
+        1>stdout.txt 2>stderr.txt
+
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result: ${result}"
+    echo "----[ stdout ]--------------------------"
+    cat stdout.txt
+    echo "----[ stderr ]--------------------------"
+    cat stderr.txt
+    echo "----------------------------------------"
+    exit 1
+fi
+
+CLASSIFIER="test"
+
+mvn --batch-mode dependency:get \
+        -Dartifact=${GROUPID}:${ARTIFACTID}:${VERSION}:${PACKAGING}:${CLASSIFIER} \
+        -DremoteRepositories=${REPOSITORYID}::default::${URL} \
+        1>stdout.txt 2>stderr.txt
+
+result=$?
+if [ ! ${result} == 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result: ${result}"
+    echo "----[ stdout ]--------------------------"
+    cat stdout.txt
+    echo "----[ stderr ]--------------------------"
+    cat stderr.txt
+    echo "----------------------------------------"
+    exit 1
+fi
+
+#**************************************************************
+# Prepare the executable for running
+#**************************************************************
+
+mkdir -p ./bin
+result=$?
+if [ ! $result == 0 ]; then
+    echo "$0[${LINENO}]"
+    echo "result = $result"
+    exit 1
+fi
+
+cd ./bin
+result=$?
+if [ ! $result == 0 ]; then
+    echo "$0[${LINENO}]"
+    echo "result = $result"
+    exit 1
+fi
+
+rm -rf *
+result=$?
+if [ ! $result == 0 ]; then
+    echo "$0[${LINENO}]"
+    echo "result = $result"
+    exit 1
+fi
+
+filename=${HOME}/.m2/repository/${GROUPID//.//}/${ARTIFACTID}/${VERSION}/${ARTIFACTID}-${VERSION}.${PACKAGING}
+if [ ! -f ${filename} ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result: ${result}"
+    echo "file not found: ${filename}"
+    exit 1
+fi
+
+unzip ${filename}
+result=$?
+if [ ! $result == 0 ]; then
+    echo "$0[${LINENO}]"
+    echo "result = $result"
+    exit 1
+fi
+
+filename_test=${HOME}/.m2/repository/${GROUPID//.//}/${ARTIFACTID}/${VERSION}/${ARTIFACTID}-${VERSION}-${CLASSIFIER}.${PACKAGING}
+if [ ! -f ${filename_test} ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "result: ${result}"
+    echo "file not found: ${filename_test}"
+    exit 1
+fi
+
+unzip ${filename_test}
+result=$?
+if [ ! $result == 0 ]; then
+    echo "$0[${LINENO}]"
+    echo "result = $result"
+    exit 1
+fi
+
+#**************************************************************
+# Restore the original directory
+#**************************************************************
+cd ${currentdir}
+result=$?
+if [ ! $result == 0 ]; then
+    echo "$0[${LINENO}]"
+    echo "result = $result"
+    exit 1
+fi
+
+#**************************************************************
+# Generate the test data
+#**************************************************************
+export PLAYERS_API_ROOTDIR="${WORKSPACE}/testdir"
+export DEBUG_DUMP_DIR="${WORKSPACE}/dump"
+
+#export DEBUG_LEVEL=50
+#export DEBUG_DEFAULT_PACKAGE_LEVEL=30
+#export DEBUG_DEFAULT_FUNCTION_LEVEL=50
+#export DEBUG_PACKAGE_LEVEL_sync=50
+#export DEBUG_FUNCTION_LEVEL_sync_HandleDir=50
+
+${WORKSPACE}/bin/generate-test-data
+result=$?
+if [ ! $result == 0 ]; then
+    echo "$0[${LINENO}]"
+    echo "result = $result"
+    exit 1
+fi
+
+#**************************************************************
+# Start the players-api server
+#**************************************************************
+${WORKSPACE}/bin/players-api --port 12001 &
+pid=$!
+echo "${pid}" > pid.txt
+
+sleep 2
+
+if ps -p ${pid} > /dev/null
+then
+   echo "${pid} is running"
+else
+   echo "${pid} is NOT running"
+   exit 1
+fi
