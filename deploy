@@ -23,8 +23,8 @@ URL=${REPOSITORY_URL}/${REPOSITORY}/
 ARTIFACTID=${NAME}-${GOARCH}-${GOOS}
 
 
-filename=${ARTIFACTID}-${VERSION}.${PACKAGING}
-pathname=${HOME}/.m2/repository/${GROUPID//.//}/${ARTIFACTID}/${VERSION}/${filename}
+FILENAME=${ARTIFACTID}-${VERSION}.${PACKAGING}
+pathname=${HOME}/.m2/repository/${GROUPID//.//}/${ARTIFACTID}/${VERSION}/${FILENAME}
 
 
 if [ ! -f ${pathname} ]; then
