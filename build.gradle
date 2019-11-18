@@ -1,0 +1,137 @@
+
+plugins {
+    id 'com.github.blindpirate.gogradle' version '0.11.4'
+}
+
+golang {
+    packagePath = 'github.com/rsmaxwell/players-api'
+}
+
+apply plugin: 'maven-publish'
+
+configurations {
+    promote
+}
+
+configurations.all {
+    resolutionStrategy.cacheDynamicVersionsFor 0, 'seconds'
+}
+
+ext {
+    new ByteArrayOutputStream().withStream { os ->
+        def result = exec {
+            commandLine = [ 'go', 'env', 'GOEXE' ]
+            standardOutput = os
+        }
+        GOEXE = os.toString().trim()
+    }
+
+    new ByteArrayOutputStream().withStream { os ->
+        def result = exec {
+            commandLine = [ 'go', 'env', 'GOOS' ]
+            standardOutput = os
+        }
+        GOOS = os.toString().trim()
+    }
+
+    new ByteArrayOutputStream().withStream { os ->
+        def result = exec {
+            commandLine = [ 'go', 'env', 'GOARCH' ]
+            standardOutput = os
+        }
+        GOARCH = os.toString().trim()
+    }
+
+    name = "players-api"
+    testName = "generate-test-data"  
+    groupID = 'com.rsmaxwell.players'	
+    artifactID = "${name}-${GOARCH}-${GOOS}"
+    packaging = "zip"
+    classifier = "test"
+
+    latestVersion = "latest.release" 
+}
+
+repositories {
+    maven {
+        name 'internal'
+        url "${repoUrl}/internal"
+        credentials {
+            username = repoUsername
+            password = repoPassword
+        }
+    }
+}
+
+dependencies{
+    promote "${groupID}:${artifactID}:${latestVersion}@${packaging}"
+    promote "${groupID}:${artifactID}:${latestVersion}:${classifier}@${packaging}"
+}
+
+ext {
+    configurations.promote.resolvedConfiguration.resolvedArtifacts.each { artifact ->
+        def moduleVersionId = artifact.moduleVersion.id
+        if (artifact.classifier == null) {
+            mainFilename = artifact.file
+        }
+        else if (artifact.classifier == 'test') {
+            testFilename = artifact.file
+        }
+        myVersion = moduleVersionId.version
+
+        println "----------------------------------------------------------"
+        println "group:      [${moduleVersionId.group}]"
+        println "name:       [${moduleVersionId.name}]"
+        println "version:    [${moduleVersionId.version}]"
+        if (artifact.classifier) {
+            println "classifier: [${artifact.classifier}]"
+        }
+        println "file:       [${artifact.file}]"
+    }
+    println "----------------------------------------------------------" 
+}
+
+task clean(type: Delete) {
+  delete 'build'
+}
+
+task debug {
+    doLast {
+        println "version: [${project.ext.myVersion}]"
+    }
+}
+
+task unzipMain(type: Copy) {
+    from zipTree(mainFilename)
+    into file(buildDir)
+}
+
+task unzipTest(type: Copy) {
+    from zipTree(testFilename)
+    into file(buildDir)
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId groupID
+            artifactId artifactID
+            version myVersion
+
+            artifact(mainFilename) 
+            artifact(testFilename) {
+                classifier = 'test'
+            }
+        }
+    }
+    repositories {
+        maven {
+            name 'staging'
+            url "${repoUrl}/staging"
+            credentials {
+                username = repoUsername
+                password = repoPassword
+            }
+        }
+    }
+}
