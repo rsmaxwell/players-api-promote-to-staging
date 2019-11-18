@@ -1,12 +1,4 @@
 
-plugins {
-    id 'com.github.blindpirate.gogradle' version '0.11.4'
-}
-
-golang {
-    packagePath = 'github.com/rsmaxwell/players-api'
-}
-
 apply plugin: 'maven-publish'
 
 configurations {
