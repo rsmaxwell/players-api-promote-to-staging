@@ -132,13 +132,21 @@ else
 fi
 
 #####################################################################
-# Test and promote (by publishing to the target repository)
+# Unpack, test and promote (by publishing to the target repository)
 #####################################################################
+gradle unzipMain unzipTest
+result=$?
+if [ ! ${result} -eq 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "Failed to unpack artifact"
+    exit 1
+fi
+
 bash -x ./test
 result=$?
 if [ ! ${result} -eq 0 ]; then
     echo "Error: $0[${LINENO}]"
-    echo "Test failed'"
+    echo "Test failed"
     exit 1
 fi
 
