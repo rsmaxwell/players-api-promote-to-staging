@@ -104,7 +104,7 @@ if [ ! ${result} -eq 0 ]; then
     echo "Could not get 'maven-metadata.xml'"
     exit 1
 fi
-latestVersionBuild=${output}
+latestVersionSource=${output}
 
 output=$(latestVersion "staging")
 result=$?
@@ -113,14 +113,14 @@ if [ ! ${result} -eq 0 ]; then
     echo "Could not get 'maven-metadata.xml'"
     exit 1
 fi
-latestVersionInternal=${output}
+latestVersionTarget=${output}
 
-vercomp ${latestVersionBuild} ${latestVersionInternal}
+vercomp ${latestVersionSource} ${latestVersionTarget}
 result=$?
 if [ ${result} == 1 ]; then
-    echo "Need to promote: ${latestVersionInternal} --> ${latestVersionBuild}"
+    echo "Need to promote: ${latestVersionTarget} --> ${latestVersionSource}"
 else
-    echo "UP-TO-DATE: version ${latestVersionBuild}"
+    echo "UP-TO-DATE: version ${latestVersionSource}"
     exit 0
 fi
 
@@ -134,6 +134,7 @@ if [ ! ${result} -eq 0 ]; then
     echo "Test failed'"
     exit 1
 fi
+
 gradle publish
 
 
