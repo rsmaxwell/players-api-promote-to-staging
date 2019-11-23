@@ -1,0 +1,139 @@
+#!/bin/bash
+
+GOARCH=$(go env GOARCH)
+GOOS=$(go env GOOS)
+
+SCHEME="https"
+HOST="server.rsmaxwell.co.uk"
+PORT=""
+BASE="archiva/repository"
+URL="${SCHEME}://${HOST}${PORT}/${BASE}"
+
+GROUPID="com.rsmaxwell.players"
+NAME="players-api"
+ARTIFACTID=${NAME}-${GOARCH}-${GOOS}
+
+#####################################################################
+# Compare dot separated strings (i.e. version format)
+#     if arg1 'less than' arg2  then return: 2
+#             'equal'                        0
+#             'greater than'                 1
+#####################################################################
+function vercomp () {
+    if [[ $1 == $2 ]]
+    then
+        return 0
+    fi
+
+    local IFS=.
+    local i ver1=($1) ver2=($2)
+    # fill empty fields in ver1 with zeros
+    for ((i=${#ver1[@]}; i<${#ver2[@]}; i++))
+    do
+        ver1[i]=0
+    done
+    for ((i=0; i<${#ver1[@]}; i++))
+    do
+        if [[ -z ${ver2[i]} ]]
+        then
+            # fill empty fields in ver2 with zeros
+            ver2[i]=0
+        fi
+        if (( 10#${ver1[i]} > 10#${ver2[i]} ))
+        then
+            return 1
+        fi
+        if (( 10#${ver1[i]} < 10#${ver2[i]} ))
+        then
+            return 2
+        fi
+    done
+    return 0
+}
+
+#####################################################################
+# Find the latest version available on a repository
+#####################################################################
+function latestVersion {
+    repository=${1}
+    if [ -z ${repository} ]; then
+        echo "Error: $0[${LINENO}]"
+        echo "repository argument was not sprecified"
+        exit 1
+    fi
+
+    METADATA="./build/maven-metadata.xml"
+    ENDPOINT=${URL}/${repository}/${GROUPID//.//}/${ARTIFACTID}/maven-metadata.xml
+    rm -rf ${METADATA}
+    wget --quiet --output-document=${METADATA} ${ENDPOINT}
+    result=$?
+    if [ ! ${result} -eq 0 ]; then
+        echo "Error: $0[${LINENO}]"
+        echo "Could not download 'maven-metadata.xml'"
+        exit 1
+    fi
+
+    line=$(grep "<latest>.*</latest>" ${METADATA})
+    if [ ${#line} == 0 ]; then
+        echo "Error: $0[${LINENO}]"
+        echo "Could not find latest version"
+        exit 1
+    fi
+
+    regex="<latest>(.*)</latest>"
+    if [[ ! ${line} =~ ${regex} ]]; then
+        echo "Error: $0[${LINENO}]"
+        echo "Could not find latest version"
+        exit 1
+    fi
+
+    rm -rf ${METADATA}
+    latest_version="${BASH_REMATCH[1]}"
+    echo "${latest_version}"
+}
+
+#####################################################################
+# If the 'latestVersion' in the source repository is greater than 
+# the 'latestVersion' in the target repository, then we need to promote
+#####################################################################
+
+output=$(latestVersion "internal")
+result=$?
+if [ ! ${result} -eq 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "Could not get 'maven-metadata.xml'"
+    exit 1
+fi
+latestVersionBuild=${output}
+
+output=$(latestVersion "staging")
+result=$?
+if [ ! ${result} -eq 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "Could not get 'maven-metadata.xml'"
+    exit 1
+fi
+latestVersionInternal=${output}
+
+vercomp ${latestVersionBuild} ${latestVersionInternal}
+result=$?
+if [ ${result} == 1 ]; then
+    echo "Need to promote: ${latestVersionInternal} --> ${latestVersionBuild}"
+else
+    echo "UP-TO-DATE: version ${latestVersionBuild}"
+    exit 0
+fi
+
+#####################################################################
+# Test and promote (by publishing to the target repository)
+#####################################################################
+bash -x ./test
+result=$?
+if [ ! ${result} -eq 0 ]; then
+    echo "Error: $0[${LINENO}]"
+    echo "Test failed'"
+    exit 1
+fi
+gradle publish
+
+
