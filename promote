@@ -62,6 +62,13 @@ function latestVersion {
         exit 1
     fi
 
+    mkdir -p ./build
+    if [ -z ${repository} ]; then
+        echo "Error: $0[${LINENO}]"
+        echo "Could not make directory: './build'"
+        exit 1
+    fi
+
     METADATA="./build/maven-metadata.xml"
     ENDPOINT=${URL}/${repository}/${GROUPID//.//}/${ARTIFACTID}/maven-metadata.xml
     rm -rf ${METADATA}
