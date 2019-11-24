@@ -134,7 +134,7 @@ fi
 #####################################################################
 # Unpack, test and promote (by publishing to the target repository)
 #####################################################################
-gradle unzipMain unzipTest
+gradle clean unzipMain unzipTest
 result=$?
 if [ ! ${result} -eq 0 ]; then
     echo "Error: $0[${LINENO}]"
