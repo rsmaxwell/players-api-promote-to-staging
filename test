@@ -1,25 +1,24 @@
 #!/bin/bash
 
-#**************************************************************
-# Get the version
-#**************************************************************
-cd build
-pwd
-ls -al 
-jq . version.json
+rc=0
 
-generate-test-data=$(find . -name generate-test-data*)
-players-api=$(find . -name players-api*)
+generate_test_data=$(find $(pwd)/build -name generate-test-data*)
+players_api=$(find $(pwd)/build -name players-api*)
+
+cd build
+jq . version.json
 
 export PORT=4202
 export PLAYERS_API_ROOTDIR="database"
 
-./${generate-test-data}
-./${players-api} &
+${generate_test_data}
+${players_api} &
 PID=$!
 
 echo "... sleeping 10 seconds ..."
 sleep 10
 
 echo "killing the 'players-api' process"
-kill $FOO_PID
+kill ${PID}
+
+exit ${rc}
