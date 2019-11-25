@@ -93,6 +93,11 @@ task debug {
     }
 }
 
+task unzip {
+     dependsOn 'unmainZip'
+     dependsOn 'untestZip'
+}
+
 task unzipMain(type: Copy) {
     from zipTree(mainFilename)
     into file(buildDir)
