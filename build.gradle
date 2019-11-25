@@ -94,8 +94,8 @@ task debug {
 }
 
 task unzip {
-     dependsOn 'unmainZip'
-     dependsOn 'untestZip'
+     dependsOn 'unzipMain'
+     dependsOn 'unzipTest'
 }
 
 task unzipMain(type: Copy) {
